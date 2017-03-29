@@ -428,14 +428,14 @@ if __name__ == '__main__':
 
     cfg_lin_shp = cfg.get('srclin', 'shp')
     cfg_lin_zt = cfg.get('srclin', 'zt')
-    if cfg_lin_zt:
+    if cfg_lin_shp and cfg_lin_zt:
         cfg_lin_zt = tuple(eval(cfg_lin_zt))
         log.info((" - maillage irrégulier autour des sources linéaires: "
                   "{cfg_lin_zt} (m, m)").format(**locals()))
 
     cfg_ponct_shp = cfg.get('srcponct', 'shp')
     cfg_ponct_rayon = cfg.get('srcponct', 'rayon')
-    if cfg_ponct_rayon:
+    if cfg_ponct_shp and cfg_ponct_rayon:
         cfg_ponct_rayon = int(cfg_ponct_rayon)
         log.info((" - maillage irrégulier autour des sources ponctuelles: "
                   "rayon de {cfg_ponct_rayon} m").format(**locals()))
@@ -443,7 +443,7 @@ if __name__ == '__main__':
     cfg_surf_shp = cfg.get('srcsurf', 'shp')
     cfg_surf_reg = cfg.get('srcsurf', 'reg')
     cfg_surf_zt = cfg.get('srcsurf', 'zt')
-    if cfg_surf_reg and cfg_surf_zt:
+    if cfg_surf_shp and cfg_surf_reg and cfg_surf_zt:
         cfg_surf_reg = int(cfg_surf_reg)
         cfg_surf_zt = tuple(eval(cfg_surf_zt))
         log.info((" - maillage irrégulier autour des sources surfaciques: "
@@ -464,21 +464,21 @@ if __name__ == '__main__':
 
     # Open files
     log.info("Lecture de la géométrie des sources...")
-    if cfg_lin_shp:
+    if cfg_lin_shp and cfg_lin_zt:
         shplin = shapefile.Reader(cfg_lin_shp)
         lins = [LineString(s.points) for s in shplin.shapes()]
         log.info(" - {} sources linéaires".format(len(lins)))
     else:
         lins = None
 
-    if cfg_ponct_shp:
+    if cfg_ponct_shp and cfg_ponct_rayon:
         shpponct = shapefile.Reader(cfg_ponct_shp)
         poncts = [Point(s.points[0]) for s in shpponct.shapes()]
         log.info(" - {} sources ponctuelles".format(len(poncts)))
     else:
         poncts = None
 
-    if cfg_surf_shp:
+    if cfg_surf_shp and cfg_surf_reg and cfg_surf_zt:
         shpsurf = shapefile.Reader(cfg_surf_shp)
         surfs = [Polygon(s.points) for s in shpsurf.shapes()]
         log.info(" - {} sources surfaciques/volumiques".format(len(surfs)))
