@@ -15,6 +15,17 @@ from shapely.geometry import Point, LineString, asShape
 from shapely.ops import unary_union
 
 
+class PymMailleurConfigparser(configparser.ConfigParser):
+    """Add some methods to ConfigParser."""
+
+    def getlist(self, section, option):
+        """Try to read a list of string."""
+        enr = self.get(section, option)
+        if not enr.strip():
+            return list()
+        return [e.strip() for e in enr.split(',') if e.strip()]
+
+
 class Pts:
     """ Point with name and source type.
     """
@@ -412,7 +423,7 @@ if __name__ == '__main__':
 
     # Lecture de la configuration
     fncfg = sys.argv[1]
-    cfg = configparser.ConfigParser()
+    cfg = PymMailleurConfigparser()
     cfg.read(fncfg)
 
     if 'output' in cfg:
@@ -426,29 +437,35 @@ if __name__ == '__main__':
     log.info(" - maillage régulier: {dx} m x {dy} m".format(
         dx=cfg_reg_dx, dy=cfg_reg_dy))
 
-    cfg_lin_shp = cfg.get('srclin', 'shp')
+    cfg_lin_shps = cfg.getlist('srclin', 'shp')
     cfg_lin_zt = cfg.get('srclin', 'zt')
-    if cfg_lin_shp and cfg_lin_zt:
+    if cfg_lin_shps and cfg_lin_zt:
         cfg_lin_zt = tuple(eval(cfg_lin_zt))
         log.info((" - maillage irrégulier autour des sources linéaires: "
                   "{cfg_lin_zt} (m, m)").format(**locals()))
+        for cfg_lin_shp in cfg_lin_shps:
+            log.info("   fichier {cfg_lin_shp}".format(**locals()))
 
-    cfg_ponct_shp = cfg.get('srcponct', 'shp')
+    cfg_ponct_shps = cfg.getlist('srcponct', 'shp')
     cfg_ponct_rayon = cfg.get('srcponct', 'rayon')
-    if cfg_ponct_shp and cfg_ponct_rayon:
+    if cfg_ponct_shps and cfg_ponct_rayon:
         cfg_ponct_rayon = int(cfg_ponct_rayon)
         log.info((" - maillage irrégulier autour des sources ponctuelles: "
                   "rayon de {cfg_ponct_rayon} m").format(**locals()))
+        for cfg_ponct_shp in cfg_ponct_shps:
+            log.info("   fichier {cfg_ponct_shp}".format(**locals()))
 
-    cfg_surf_shp = cfg.get('srcsurf', 'shp')
+    cfg_surf_shps = cfg.getlist('srcsurf', 'shp')
     cfg_surf_reg = cfg.get('srcsurf', 'reg')
     cfg_surf_zt = cfg.get('srcsurf', 'zt')
-    if cfg_surf_shp and cfg_surf_reg and cfg_surf_zt:
+    if cfg_surf_shps and cfg_surf_reg and cfg_surf_zt:
         cfg_surf_reg = int(cfg_surf_reg)
         cfg_surf_zt = tuple(eval(cfg_surf_zt))
         log.info((" - maillage irrégulier autour des sources surfaciques: "
                   "reg {cfg_surf_reg} m, {cfg_surf_zt} (m, m)").format(
             **locals()))
+        for cfg_surf_shp in cfg_surf_shps:
+            log.info("   fichier {cfg_surf_shp}".format(**locals()))
 
     # Emprise du domaine
     shpreg = shapefile.Reader(cfg_reg_shp)
@@ -464,26 +481,26 @@ if __name__ == '__main__':
 
     # Open files
     log.info("Lecture de la géométrie des sources...")
-    if cfg_lin_shp and cfg_lin_zt:
-        shplin = shapefile.Reader(cfg_lin_shp)
-        lins = [asShape(s.__geo_interface__) for s in shplin.shapes()]
+    lins = list()
+    if cfg_lin_shps and cfg_lin_zt:
+        for cfg_lin_shp in cfg_lin_shps:
+            objs = shapefile.Reader(cfg_lin_shp)
+            lins += [asShape(s.__geo_interface__) for s in objs.shapes()]
         log.info(" - {} sources linéaires".format(len(lins)))
-    else:
-        lins = None
 
-    if cfg_ponct_shp and cfg_ponct_rayon:
-        shpponct = shapefile.Reader(cfg_ponct_shp)
-        poncts = [asShape(s.__geo_interface__) for s in shpponct.shapes()]
+    poncts = list()
+    if cfg_ponct_shps and cfg_ponct_rayon:
+        for cfg_ponct_shp in cfg_ponct_shps:
+            objs = shapefile.Reader(cfg_ponct_shp)
+            poncts += [asShape(s.__geo_interface__) for s in objs.shapes()]
         log.info(" - {} sources ponctuelles".format(len(poncts)))
-    else:
-        poncts = None
 
-    if cfg_surf_shp and cfg_surf_reg and cfg_surf_zt:
-        shpsurf = shapefile.Reader(cfg_surf_shp)
-        surfs = [asShape(s.__geo_interface__) for s in shpsurf.shapes()]
+    surfs = list()
+    if cfg_surf_shps and cfg_surf_reg and cfg_surf_zt:
+        for cfg_surf_shp in cfg_surf_shps:
+            objs = shapefile.Reader(cfg_surf_shp)
+            surfs += [asShape(s.__geo_interface__) for s in surfs.shapes()]
         log.info(" - {} sources surfaciques/volumiques".format(len(surfs)))
-    else:
-        surfs = None
 
     # Création du maillage
     log.info("Création du maillage...")
