@@ -499,7 +499,7 @@ if __name__ == '__main__':
     if cfg_surf_shps and cfg_surf_reg and cfg_surf_zt:
         for cfg_surf_shp in cfg_surf_shps:
             objs = shapefile.Reader(cfg_surf_shp)
-            surfs += [asShape(s.__geo_interface__) for s in surfs.shapes()]
+            surfs += [asShape(s.__geo_interface__) for s in objs.shapes()]
         log.info(" - {} sources surfaciques/volumiques".format(len(surfs)))
 
     # Création du maillage
