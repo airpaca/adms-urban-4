@@ -11,7 +11,7 @@ from math import cos, sin
 import numpy
 import shapefile
 import sys
-from shapely.geometry import Point, LineString, Polygon
+from shapely.geometry import Point, LineString, asShape
 from shapely.ops import unary_union
 
 
@@ -466,21 +466,21 @@ if __name__ == '__main__':
     log.info("Lecture de la géométrie des sources...")
     if cfg_lin_shp and cfg_lin_zt:
         shplin = shapefile.Reader(cfg_lin_shp)
-        lins = [LineString(s.points) for s in shplin.shapes()]
+        lins = [asShape(s.__geo_interface__) for s in shplin.shapes()]
         log.info(" - {} sources linéaires".format(len(lins)))
     else:
         lins = None
 
     if cfg_ponct_shp and cfg_ponct_rayon:
         shpponct = shapefile.Reader(cfg_ponct_shp)
-        poncts = [Point(s.points[0]) for s in shpponct.shapes()]
+        poncts = [asShape(s.__geo_interface__) for s in shpponct.shapes()]
         log.info(" - {} sources ponctuelles".format(len(poncts)))
     else:
         poncts = None
 
     if cfg_surf_shp and cfg_surf_reg and cfg_surf_zt:
         shpsurf = shapefile.Reader(cfg_surf_shp)
-        surfs = [Polygon(s.points) for s in shpsurf.shapes()]
+        surfs = [asShape(s.__geo_interface__) for s in shpsurf.shapes()]
         log.info(" - {} sources surfaciques/volumiques".format(len(surfs)))
     else:
         surfs = None
