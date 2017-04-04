@@ -4,10 +4,12 @@
 """Création de données ADMS-Urban 4 (format SPT) des sources routières."""
 
 
-import sys
 import configparser
-import shapefile
+import sys
 import pandas
+import shapefile
+from shapely.geometry import asShape
+from emilin import geom
 
 
 # Arguments
@@ -24,7 +26,6 @@ fni = cfg.get('fichiers', 'shape')
 fno = cfg.get('fichiers', 'output')
 
 field_nom = cfg.get('champs', 'nom')
-field_long = cfg.get('champs', 'long_m')
 field_canyon_width = cfg.get('champs', 'canyon_width_m')
 field_canyon_height = cfg.get('champs', 'canyon_height_m')
 field_height = cfg.get('champs', 'height_m')
@@ -49,7 +50,6 @@ shp = shapefile.Reader(fni)
 # Sélection des champs intéressants
 fields = [e[0] for e in shp.fields if e[0] != 'DeletionFlag']
 idx_nom = fields.index(field_nom)
-idx_long = fields.index(field_long)
 idx_canyon_width = fields.index(field_canyon_width)
 idx_canyon_height = fields.index(field_canyon_height)
 idx_height = fields.index(field_height)
@@ -57,33 +57,38 @@ idx_emissions = {k: fields.index(v) for (k, v) in field_emissions.items()}
 
 # Boucle sur les enregistrements
 for row in shp.iterShapeRecords():
-    source_name = 'road_' + str(row.record[idx_nom])
 
-    # `spt` file
-    canyon_width = row.record[idx_canyon_width]
-    canyon_height = row.record[idx_canyon_height]
-    height = row.record[idx_height]
-    spts.append(
-        (source_name, 'No', 0, 0, 'Temperature', 0, 'Actual', 'Velocity', 0, 0,
-         'Road', height, 0, canyon_width, canyon_height, 0, 0, 0, 'No', 2016,
-         'London (central)', '(Main)', ''))
+    # Split geometry
+    g = asShape(row.shape.__geo_interface__)
+    lins = geom.split_geom_adms(g)
 
-    # `gpt` file
-    gpts.append((source_name, 'Road'))
+    for ilin, lin in enumerate(lins, start=1):
+        source_name = 'road_{}_{}'.format(row.record[idx_nom], ilin)
 
-    # `vgt` file
-    if len(row.shape.points) > 50:
-        print("Error: road geometry cannot exceed 50 points !")
+        # `spt` file
+        canyon_width = row.record[idx_canyon_width]
+        canyon_height = row.record[idx_canyon_height]
+        height = row.record[idx_height]
+        spts.append(
+            (source_name, 'No', 0, 0, 'Temperature', 0, 'Actual', 'Velocity', 0,
+             0, 'Road', height, 0, canyon_width, canyon_height, 0, 0, 0, 'No',
+             2016, 'London (central)', '(Main)', ''))
 
-    for x, y in row.shape.points:
-        vgts.append((source_name, x, y))
+        # `gpt` file
+        gpts.append((source_name, 'Road'))
 
-    # `eits` file
-    long = row.record[idx_long]
-    for poladms, idx in idx_emissions.items():
-        # kg/an -> g/km/s
-        emi = row.record[idx] * 1000 / (3600 * 24 * 365) / (long / 1000)
-        eits.append((source_name, poladms, emi, 'g/km/s'))
+        # `vgt` file
+        for x, y in lin.coords:
+            vgts.append((source_name, x, y))
+
+        # `eits` file
+        for poladms, idx in idx_emissions.items():
+            # kg/an -> g/km/s
+            emi = (row.record[idx]
+                   * 1000
+                   / (3600 * 24 * 365)
+                   / (g.length / 1000))
+            eits.append((source_name, poladms, emi, 'g/km/s'))
 
 # Entêtes
 header_spt = [
