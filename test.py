@@ -8,7 +8,7 @@ import unittest
 
 from shapely.geometry import LineString
 
-from emilin import geom
+from emilin.emilin_shp_to_spt import split_iterable, split_geom_adms
 
 
 def random_coord():
@@ -30,74 +30,97 @@ class ShapelyTestCase(unittest.TestCase):
 
 
 class TestFunctions(ShapelyTestCase):
-    def test_split_geom_1(self):
-        l1 = random_points(10)
-        l2 = random_points(15)
-        lt = l1 + l2
-        lts = geom.split_geom(lt, [10])
-        self.assertEqual(lts[0], l1)
-        self.assertEqual(lts[1], l2)
+    def test_split_iterable_1(self):
+        iterable = 'abcdefghi'
+        idx = []
+        objs = split_iterable(iterable, idx)
+        self.assertEqual(objs, [iterable])
 
-    def test_split_geom_2(self):
-        n1, n2, n3 = 3, 5, 4
-        l1 = random_points(n1)
-        l2 = random_points(n2)
-        l3 = random_points(n3)
-        lt = l1 + l2 + l3
-        lts = geom.split_geom(lt, [n1, n1 + n2])
-        self.assertEqual(lts[0], l1)
-        self.assertEqual(lts[1], l2)
-        self.assertEqual(lts[2], l3)
+    def test_split_iterable_2(self):
+        iterable = 'abcdefghi'
+        idx = [5]
+        objs = split_iterable(iterable, idx)
+        self.assertEqual(len(objs), 2)
+        self.assertEqual(objs[0], 'abcdef')
+        self.assertEqual(objs[1], 'fghi')
 
-    def test_split_geom_3(self):
-        n1, n2, n3, n4 = 10, 5, 2, 14
-        l1 = random_points(n1)
-        l2 = random_points(n2)
-        l3 = random_points(n3)
-        l4 = random_points(n4)
-        lt = l1 + l2 + l3 + l4
-        lts = geom.split_geom(lt, [n1, n1 + n2, n1 + n2 + n3])
-        self.assertEqual(lts[0], l1)
-        self.assertEqual(lts[1], l2)
-        self.assertEqual(lts[2], l3)
-        self.assertEqual(lts[3], l4)
+    def test_split_iterable_3(self):
+        iterable = 'abcdefghi'
+        idx = [2, 5]
+        objs = split_iterable(iterable, idx)
+        self.assertEqual(len(objs), 3)
+        self.assertEqual(objs[0], 'abc')
+        self.assertEqual(objs[1], 'cdef')
+        self.assertEqual(objs[2], 'fghi')
 
-    def test_split_geom_4(self):
-        l1 = random_points(5)
-        lts = geom.split_geom(l1, [])
-        self.assertEqual(lts[0], l1)
+    def test_split_iterable_4(self):
+        iterable = 'abcdefghi'
+        idx = [0, 5]
+        objs = split_iterable(iterable, idx)
+        self.assertEqual(len(objs), 2)
+        self.assertEqual(objs[0], 'abcdef')
+        self.assertEqual(objs[1], 'fghi')
+
+    def test_split_iterable_5(self):
+        iterable = 'abcdefghi'
+        idx = [0, 8]
+        objs = split_iterable(iterable, idx)
+        self.assertEqual(len(objs), 1)
+        self.assertEqual(objs[0], iterable)
+
+    def test_split_iterable_6(self):
+        iterable = 'abcdefghi'
+        idx = [3, 8]
+        objs = split_iterable(iterable, idx)
+        self.assertEqual(len(objs), 2)
+        self.assertEqual(objs[0], 'abcd')
+        self.assertEqual(objs[1], 'defghi')
+
+    def test_split_iterable_points(self):
+        l = random_points(20)
+        idx = [5, 15]
+        lts = split_iterable(l, idx)
+        self.assertEqual(len(lts), len(idx) + 1)
+        self.assertEqual(lts[0], l[0:6])
+        self.assertEqual(lts[1], l[5:16])
+        self.assertEqual(lts[2], l[15:])
 
     def test_split_geom_adms_1(self):
         l = LineString(random_points(10))
-        outs = geom.split_geom_adms(l)
+        outs = split_geom_adms(l)
         self.assertEqual(len(outs), 1)
         self.assertEqualGeom(outs[0], l)
+        for out in outs:
+            self.assertLessEqual(len(out.coords[:]), 50)
 
     def test_split_geom_adms_2(self):
         l = LineString(random_points(50))
-        outs = geom.split_geom_adms(l)
+        outs = split_geom_adms(l)
         self.assertEqual(len(outs), 1)
         self.assertEqualGeom(outs[0], l)
+        for out in outs:
+            self.assertLessEqual(len(out.coords[:]), 50)
 
     def test_split_geom_adms_3(self):
-        p1 = random_points(50)
-        p2 = random_points(10)
-        l = LineString(p1 + p2)
-        outs = geom.split_geom_adms(l)
+        pts = random_points(60)
+        l = LineString(pts)
+        outs = split_geom_adms(l)
         self.assertEqual(len(outs), 2)
-        self.assertEqualGeom(outs[0], LineString(p1))
-        self.assertEqualGeom(outs[1], LineString(p2))
+        self.assertEqualGeom(outs[0], LineString(pts[0:50]))
+        self.assertEqualGeom(outs[1], LineString(pts[49:]))
+        for out in outs:
+            self.assertLessEqual(len(out.coords[:]), 50)
 
     def test_split_geom_adms_4(self):
-        p1 = random_points(50)
-        p2 = random_points(50)
-        p3 = random_points(20)
-        l = LineString(p1 + p2 + p3)
-        outs = geom.split_geom_adms(l)
+        pts = random_points(120)
+        l = LineString(pts)
+        outs = split_geom_adms(l)
         self.assertEqual(len(outs), 3)
-        self.assertEqualGeom(outs[0], LineString(p1))
-        self.assertEqualGeom(outs[1], LineString(p2))
-        self.assertEqualGeom(outs[2], LineString(p3))
+        self.assertEqualGeom(outs[0], LineString(pts[0:50]))
+        self.assertEqualGeom(outs[1], LineString(pts[49:99]))
+        self.assertEqualGeom(outs[2], LineString(pts[98:]))
+        for out in outs:
+            self.assertLessEqual(len(out.coords[:]), 50)
 
 
 if __name__ == '__main__':
